@@ -21,6 +21,7 @@ language_code_mapping = {
     "Nyangbo": "nyb",
     "Tsez": "ddo",
     "Uspanteko": "usp",
+    "Dene": "dnd"
 }
 
 model_type_mapping = {"ctc": CTCGlossingModel, "morph": MorphemeGlossingModel}

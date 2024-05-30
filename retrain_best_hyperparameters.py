@@ -4,7 +4,7 @@ import argparse
 from experiment import experiment
 from containers import Hyperparameters
 
-languages = ["Arapaho", "Gitksan", "Lezgi", "Natugu", "Nyangbo", "Tsez", "Uspanteko"]
+languages = ["Arapaho", "Gitksan", "Lezgi", "Natugu", "Nyangbo", "Tsez", "Uspanteko", "Dene"]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Retrain Models with Best Hyperparameters")

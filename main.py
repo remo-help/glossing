@@ -20,6 +20,7 @@ language_code_mapping = {
     "Nyangbo": "nyb",
     "Tsez": "ddo",
     "Uspanteko": "usp",
+    "Dene": "dnd"
 }
 
 
