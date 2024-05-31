@@ -45,7 +45,7 @@ def _check_datapoint(datapoint: RawDatapoint) -> bool:
         return False
 
     if morphemes is not None and any(
-        len(ms) != len(wls) for ms, wls in zip(morphemes, target)
+            len(ms) != len(wls) for ms, wls in zip(morphemes, target)
     ):
         return False
 
@@ -142,14 +142,93 @@ def read_glossing_file(file) -> GlossingFileData:
     return GlossingFileData(sources=sources, targets=targets, morphemes=morphemes)
 
 
+def read_glossing_direct(file: list[tuple]) -> GlossingFileData:
+    '''
+    We use this function to read in data directly for inference, instead from a file
+    '''
+    track = 2  #if "track1" in file else 2
+    covered = "covered"  #in file and "uncovered" not in file
+
+    raw_datapoints = [_make_empty_datapoint()]
+
+    for line in file:
+        utt, morph = line
+
+        # Start New Datapoint on Empty Line
+        if not utt:
+            raw_datapoints.append(_make_empty_datapoint())
+
+            # Handle Source Lines
+        tokens = utt.split(" ")
+        assert raw_datapoints[-1]["source"] is None
+        raw_datapoints[-1]["source"] = tokens
+
+        # Handle Morpheme Lines
+        tokens = morph.split(" ")
+        morphemes = [token.split("-") for token in tokens]
+        assert raw_datapoints[-1]["morphemes"] is None
+        raw_datapoints[-1]["morphemes"] = morphemes
+
+        # Replace Source with Canonical Segmentation
+        assert raw_datapoints[-1]["source"] is not None
+        raw_datapoints[-1]["source"] = tokens
+
+        # Handle Glossing (=Target) Lines
+        word_labels = utt.strip().split(" ")
+        word_labels = [label.strip() for label in word_labels if label.strip()]
+        if not word_labels:
+            labels = None
+        else:
+            labels = [word_label.split("-") for word_label in word_labels]
+
+        assert raw_datapoints[-1]["target"] is None
+        raw_datapoints[-1]["target"] = None  #we want this none for inference labels
+
+    # Remove Empty Datapoints
+    raw_datapoints = [
+        datapoint for datapoint in raw_datapoints if not _datapoint_is_empty(datapoint)
+    ]
+
+    # Remove Corrupted Datapoints
+    if not covered:
+        raw_datapoints = [
+            datapoint for datapoint in raw_datapoints if _check_datapoint(datapoint)
+        ]
+
+    # Check File Constraints
+    if track == 2:
+        assert all(datapoint["morphemes"] is not None for datapoint in raw_datapoints)
+
+    if covered:
+        assert all(datapoint["target"] is None for datapoint in raw_datapoints)
+    else:
+        assert all(datapoint["target"] is not None for datapoint in raw_datapoints)
+
+    # Unpack Datapoints
+    sources = [datapoint["source"] for datapoint in raw_datapoints]
+
+    if track == 2:
+        morphemes = [datapoint["morphemes"] for datapoint in raw_datapoints]
+    else:
+        morphemes = [None for _ in raw_datapoints]
+
+    if not covered:
+        targets = [datapoint["target"] for datapoint in raw_datapoints]
+    else:
+        targets = [None for _ in raw_datapoints]
+
+    # Return Data
+    return GlossingFileData(sources=sources, targets=targets, morphemes=morphemes)
+
+
 def _make_source_sentence(
-    source: List[str], sos_token: str = "[SOS]", eos_token: str = "[EOS]"
+        source: List[str], sos_token: str = "[SOS]", eos_token: str = "[EOS]"
 ) -> List[str]:
     return [sos_token] + list(" ".join(source)) + [eos_token]
 
 
 def _make_word_extraction_index(
-    sources: List[List[str]], maximum_sentence_length: int, start_offset: int = 1
+        sources: List[List[str]], maximum_sentence_length: int, start_offset: int = 1
 ):
     word_extraction_index = []
     word_lengths = []
@@ -178,11 +257,11 @@ def indices_to_tensor(indices: List[List[int]]) -> torch.Tensor:
 
 
 def _batch_collate(
-    batch,
-    source_tokenizer: Vocab,
-    target_tokenizer: Vocab,
-    sos_token: str = "[SOS]",
-    eos_token: str = "[EOS]",
+        batch,
+        source_tokenizer: Vocab,
+        target_tokenizer: Vocab,
+        sos_token: str = "[SOS]",
+        eos_token: str = "[EOS]",
 ):
     sources, targets, morphemes = zip(*batch)
 
@@ -270,7 +349,7 @@ class SequencePairDataset(Dataset):
         return self._length
 
     def __getitem__(
-        self, idx: int
+            self, idx: int
     ) -> Tuple[List[str], List[List[str]], List[List[str]]]:
         return (
             self.dataset.sources[idx],
@@ -283,11 +362,11 @@ class GlossingDataset(LightningDataModule):
     special_tokens = ["[PAD]", "[UNK]", "[SOS]", "[EOS]"]
 
     def __init__(
-        self,
-        train_file: str,
-        validation_file: str,
-        test_file: str,
-        batch_size: int = 32,
+            self,
+            train_file: str,
+            validation_file: str,
+            test_file: str,
+            batch_size: int = 32,
     ):
         super().__init__()
         self.train_file = train_file
@@ -296,7 +375,7 @@ class GlossingDataset(LightningDataModule):
 
         self.batch_size = batch_size
 
-    def setup(self, stage: str, vocab: str=None) -> None:
+    def setup(self, stage: str, vocab: str = None) -> None:
         if stage == "fit" or stage is None:
             train_data = read_glossing_file(self.train_file)
             validation_data = read_glossing_file(self.validation_file)
@@ -419,9 +498,10 @@ class InferenceDataset(LightningDataModule):
 
     def __init__(
             self,
-            train_file: str,
+            train_file: str or list[tuple],
             vocab_file: str,
-            batch_size: int = 32,
+            batch_size: int = 32
+
     ):
         super().__init__()
         self.train_file = train_file
@@ -429,13 +509,17 @@ class InferenceDataset(LightningDataModule):
 
         self.batch_size = batch_size
 
-    def setup(self, vocab: str = None) -> None:
+    def setup(self, vocab: str = None,
+              direct: bool = False) -> None:
 
-        train_data = read_glossing_file(self.train_file)
+        if direct:
+            train_data = read_glossing_direct(self.train_file)
+        else:
+            train_data = read_glossing_file(self.train_file)
         # validation_data = read_glossing_file(self.validation_file)
 
         self.train_data = SequencePairDataset(train_data)
-            # self.validation_data = SequencePairDataset(validation_data)
+        # self.validation_data = SequencePairDataset(validation_data)
 
         if vocab:
             with open(vocab, 'rb') as f:
@@ -458,21 +542,21 @@ class InferenceDataset(LightningDataModule):
         self.target_alphabet_size = len(self.target_alphabet) + 4
 
         self.source_tokenizer = build_vocab_from_iterator(
-                [[symbol] for symbol in self.source_alphabet],
-                specials=self.special_tokens,
-            )
+            [[symbol] for symbol in self.source_alphabet],
+            specials=self.special_tokens,
+        )
         self.target_tokenizer = build_vocab_from_iterator(
-                [[symbol] for symbol in self.target_alphabet],
-                specials=self.special_tokens,
-            )
+            [[symbol] for symbol in self.target_alphabet],
+            specials=self.special_tokens,
+        )
         self.source_tokenizer.set_default_index(1)
         self.target_tokenizer.set_default_index(1)
 
         self._batch_collate = partial(
-                _batch_collate,
-                source_tokenizer=self.source_tokenizer,
-                target_tokenizer=self.target_tokenizer,
-            )
+            _batch_collate,
+            source_tokenizer=self.source_tokenizer,
+            target_tokenizer=self.target_tokenizer,
+        )
 
     def train_dataloader(self):
         return DataLoader(
@@ -482,4 +566,3 @@ class InferenceDataset(LightningDataModule):
             collate_fn=self._batch_collate,
             num_workers=6,
         )
-

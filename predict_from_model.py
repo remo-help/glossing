@@ -205,16 +205,20 @@ def get_predictions_single(model_path: str = 'models/glosser.ckpt', language_cod
 
 def get_predictions_inference(
         path_to_model: str,
-        filepath: str,
+        filepath: str or list[tuple],
         vocab: str,
         model_type: str,
         #   data_path: str = "./data",
         verbose: bool = False,
+        direct: bool = False,
 ):
     # Load Data
     dm = _make_inference_dataset(filepath, vocab=vocab, batch_size=16)
     dm.prepare_data()
-    dm.setup(vocab=vocab)
+    if direct:
+        dm.setup(vocab=vocab, direct=True)
+    else:
+        dm.setup(vocab=vocab)
 
     # Load Model
     if model_type == "ctc":
