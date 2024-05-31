@@ -1,4 +1,5 @@
 import os
+import torch
 
 from tqdm import tqdm
 from experiment import _make_dataset, _make_inference_dataset
@@ -227,8 +228,9 @@ def get_predictions_inference(
 
     # Create Trainer
     # Train Model
+    accelerator = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     trainer = Trainer(
-        accelerator="cpu",
+        accelerator=accelerator,
         devices=1,
         enable_progress_bar=True,
         enable_model_summary=verbose,
