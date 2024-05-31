@@ -149,14 +149,14 @@ def read_glossing_direct(file: list[tuple]) -> GlossingFileData:
     track = 2  #if "track1" in file else 2
     covered = "covered"  #in file and "uncovered" not in file
 
-    raw_datapoints = [_make_empty_datapoint()]
+    raw_datapoints = [] #[_make_empty_datapoint()]
 
     for line in file:
         utt, morph = line
 
         # Start New Datapoint on Empty Line
-        if not utt:
-            raw_datapoints.append(_make_empty_datapoint())
+
+        raw_datapoints.append(_make_empty_datapoint())
 
             # Handle Source Lines
         tokens = utt.split(" ")
@@ -174,20 +174,21 @@ def read_glossing_direct(file: list[tuple]) -> GlossingFileData:
         raw_datapoints[-1]["source"] = tokens
 
         # Handle Glossing (=Target) Lines
-        word_labels = utt.strip().split(" ")
-        word_labels = [label.strip() for label in word_labels if label.strip()]
-        if not word_labels:
-            labels = None
-        else:
-            labels = [word_label.split("-") for word_label in word_labels]
+        #word_labels = utt.strip().split(" ")
+        #word_labels = [label.strip() for label in word_labels if label.strip()]
+        #if not word_labels:
+        #    labels = None
+        #else:
+        #    labels = [word_label.split("-") for word_label in word_labels]
 
         assert raw_datapoints[-1]["target"] is None
         raw_datapoints[-1]["target"] = None  #we want this none for inference labels
 
     # Remove Empty Datapoints
-    raw_datapoints = [
-        datapoint for datapoint in raw_datapoints if not _datapoint_is_empty(datapoint)
-    ]
+    # we probably dont want this so the order stays consistent
+    #raw_datapoints = [
+    #    datapoint for datapoint in raw_datapoints if not _datapoint_is_empty(datapoint)
+    #]
 
     # Remove Corrupted Datapoints
     if not covered:
