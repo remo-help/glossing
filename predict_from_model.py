@@ -183,6 +183,25 @@ def get_predictions_from_retrained_models(base_path: str = "./retrain_results"):
             trial=trial,
         )
 
+def get_predictions_single(model_path: str='models/glosser.ckpt', language_code='dnd', track=2, model_type='ctc'):
+
+    #path_to_best_checkpoint = os.path.('models/glosser.ckpt')
+
+    predictions = get_predictions(
+        path_to_model=model_path,
+        language=code_language_mapping[language_code],
+        track=track,
+        model_type=model_type,
+    )
+
+    write_predictions(
+        predictions=predictions,
+        language_code=language_code,
+        track=track,
+        model_type=model_type,
+        trial=trial,
+    )
+
 
 if __name__ == "__main__":
     get_predictions_from_retrained_models()
