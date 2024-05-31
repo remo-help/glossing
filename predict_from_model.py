@@ -228,7 +228,7 @@ def get_predictions_inference(
 
     # Create Trainer
     # Train Model
-    accelerator = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    accelerator = "gpu" if torch.cuda.is_available() else "cpu"
     trainer = Trainer(
         accelerator=accelerator,
         devices=1,
