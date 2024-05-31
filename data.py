@@ -474,11 +474,11 @@ class InferenceDataset(LightningDataModule):
                 target_tokenizer=self.target_tokenizer,
             )
 
-    def train_dataloader(self, shuffle: bool = True):
+    def train_dataloader(self):
         return DataLoader(
             self.train_data,
             batch_size=self.batch_size,
-            shuffle=shuffle,
+            shuffle=False,
             collate_fn=self._batch_collate,
             num_workers=6,
         )
