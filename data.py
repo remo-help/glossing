@@ -1,4 +1,7 @@
+import pickle
+
 import torch
+import pickle as pkl
 
 from typing import List
 from typing import Tuple
@@ -293,7 +296,7 @@ class GlossingDataset(LightningDataModule):
 
         self.batch_size = batch_size
 
-    def setup(self, stage: str) -> None:
+    def setup(self, stage: str, vocab: str=None) -> None:
         if stage == "fit" or stage is None:
             train_data = read_glossing_file(self.train_file)
             validation_data = read_glossing_file(self.validation_file)
@@ -333,9 +336,55 @@ class GlossingDataset(LightningDataModule):
                 source_tokenizer=self.source_tokenizer,
                 target_tokenizer=self.target_tokenizer,
             )
+            with open(f'{self.train_file}.vocab', 'wb+') as f:
+                pkl.dump((self.source_alphabet, self.target_alphabet), f)
 
         if stage == "test" or stage is None:
             self.test_data = SequencePairDataset(read_glossing_file(self.test_file))
+
+        if stage == "inference":
+            train_data = read_glossing_file(self.train_file)
+            #validation_data = read_glossing_file(self.validation_file)
+
+            self.train_data = SequencePairDataset(train_data)
+            #self.validation_data = SequencePairDataset(validation_data)
+
+            if vocab:
+                with open(vocab, 'rb') as f:
+                    self.source_alphabet, self.target_alphabet = pickle.load(f)
+            else:
+                self.source_alphabet = set()
+                self.source_alphabet.add(" ")
+                for source in train_data.sources:
+                    for word in source:
+                        self.source_alphabet.update(set(word))
+                self.source_alphabet = list(sorted(self.source_alphabet))
+
+                self.target_alphabet = set()
+                for target in train_data.targets:
+                    for word_labels in target:
+                        self.target_alphabet.update(set(word_labels))
+                    self.target_alphabet = list(sorted(self.target_alphabet))
+
+            self.source_alphabet_size = len(self.source_alphabet) + 4
+            self.target_alphabet_size = len(self.target_alphabet) + 4
+
+            self.source_tokenizer = build_vocab_from_iterator(
+                [[symbol] for symbol in self.source_alphabet],
+                specials=self.special_tokens,
+            )
+            self.target_tokenizer = build_vocab_from_iterator(
+                [[symbol] for symbol in self.target_alphabet],
+                specials=self.special_tokens,
+            )
+            self.source_tokenizer.set_default_index(1)
+            self.target_tokenizer.set_default_index(1)
+
+            self._batch_collate = partial(
+                _batch_collate,
+                source_tokenizer=self.source_tokenizer,
+                target_tokenizer=self.target_tokenizer,
+            )
 
     def train_dataloader(self, shuffle: bool = True):
         return DataLoader(
@@ -363,3 +412,74 @@ class GlossingDataset(LightningDataModule):
             collate_fn=self._batch_collate,
             num_workers=6,
         )
+
+
+class InferenceDataset(LightningDataModule):
+    special_tokens = ["[PAD]", "[UNK]", "[SOS]", "[EOS]"]
+
+    def __init__(
+            self,
+            train_file: str,
+            vocab_file: str,
+            batch_size: int = 32,
+    ):
+        super().__init__()
+        self.train_file = train_file
+        self.vocab_file = vocab_file
+
+        self.batch_size = batch_size
+
+    def setup(self, vocab: str = None) -> None:
+
+        train_data = read_glossing_file(self.train_file)
+        # validation_data = read_glossing_file(self.validation_file)
+
+        self.train_data = SequencePairDataset(train_data)
+            # self.validation_data = SequencePairDataset(validation_data)
+
+        if vocab:
+            with open(vocab, 'rb') as f:
+                self.source_alphabet, self.target_alphabet = pickle.load(f)
+        else:
+            self.source_alphabet = set()
+            self.source_alphabet.add(" ")
+            for source in train_data.sources:
+                for word in source:
+                    self.source_alphabet.update(set(word))
+            self.source_alphabet = list(sorted(self.source_alphabet))
+
+            self.target_alphabet = set()
+            for target in train_data.targets:
+                for word_labels in target:
+                    self.target_alphabet.update(set(word_labels))
+                self.target_alphabet = list(sorted(self.target_alphabet))
+
+        self.source_alphabet_size = len(self.source_alphabet) + 4
+        self.target_alphabet_size = len(self.target_alphabet) + 4
+
+        self.source_tokenizer = build_vocab_from_iterator(
+                [[symbol] for symbol in self.source_alphabet],
+                specials=self.special_tokens,
+            )
+        self.target_tokenizer = build_vocab_from_iterator(
+                [[symbol] for symbol in self.target_alphabet],
+                specials=self.special_tokens,
+            )
+        self.source_tokenizer.set_default_index(1)
+        self.target_tokenizer.set_default_index(1)
+
+        self._batch_collate = partial(
+                _batch_collate,
+                source_tokenizer=self.source_tokenizer,
+                target_tokenizer=self.target_tokenizer,
+            )
+
+    def train_dataloader(self, shuffle: bool = True):
+        return DataLoader(
+            self.train_data,
+            batch_size=self.batch_size,
+            shuffle=shuffle,
+            collate_fn=self._batch_collate,
+            num_workers=6,
+        )
+
