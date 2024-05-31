@@ -165,6 +165,7 @@ def read_glossing_direct(file: list[tuple]) -> GlossingFileData:
 
         # Handle Morpheme Lines
         tokens = morph.split(" ")
+        # TODO: look into this
         morphemes = [token.split("-") for token in tokens]
         assert raw_datapoints[-1]["morphemes"] is None
         raw_datapoints[-1]["morphemes"] = morphemes
