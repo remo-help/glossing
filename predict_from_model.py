@@ -2,11 +2,11 @@ import os
 import torch
 
 from tqdm import tqdm
-from experiment import _make_dataset, _make_inference_dataset
+from .experiment import _make_dataset, _make_inference_dataset
 from pytorch_lightning import Trainer
-from ctc_model import CTCGlossingModel
-from experiment import _make_test_path
-from morpheme_model import MorphemeGlossingModel
+from .ctc_model import CTCGlossingModel
+from .experiment import _make_test_path
+from .morpheme_model import MorphemeGlossingModel
 
 language_code_mapping = {
     "Arapaho": "arp",
