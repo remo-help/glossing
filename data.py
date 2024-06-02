@@ -9,7 +9,7 @@ from typing import Dict
 from typing import Union
 from typing import Optional
 from itertools import chain
-from c.ontainers import Batch
+from .containers import Batch
 from functools import partial
 from torchtext.vocab import Vocab
 from .utils import nlp_pad_sequence
