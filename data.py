@@ -9,13 +9,13 @@ from typing import Dict
 from typing import Union
 from typing import Optional
 from itertools import chain
-from containers import Batch
+from c.ontainers import Batch
 from functools import partial
 from torchtext.vocab import Vocab
-from utils import nlp_pad_sequence
+from .utils import nlp_pad_sequence
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-from containers import GlossingFileData
+from .containers import GlossingFileData
 from pytorch_lightning import LightningDataModule
 from torchtext.vocab import build_vocab_from_iterator
 

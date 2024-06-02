@@ -4,10 +4,10 @@ import torch.nn as nn
 
 from torch import Tensor
 from itertools import chain
-from containers import Batch
+from .containers import Batch
 from torch.optim import AdamW
-from utils import make_mask_2d
-from bilstm import BiLSTMEncoder
+from .utils import make_mask_2d
+from .bilstm import BiLSTMEncoder
 from pytorch_lightning import LightningModule
 from torch.optim.lr_scheduler import ExponentialLR
 

@@ -3,11 +3,11 @@ import torch
 import logging
 import pandas as pd
 
-from data import GlossingDataset, InferenceDataset
+from .data import GlossingDataset, InferenceDataset
 from pytorch_lightning import Trainer
-from ctc_model import CTCGlossingModel
-from containers import Hyperparameters
-from morpheme_model import MorphemeGlossingModel
+from .ctc_model import CTCGlossingModel
+from .containers import Hyperparameters
+from .morpheme_model import MorphemeGlossingModel
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import ModelCheckpoint

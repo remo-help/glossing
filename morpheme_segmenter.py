@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 
 from torch import Tensor
-from utils import make_mask_2d
-from utils import make_mask_3d
+from .utils import make_mask_2d
+from .utils import make_mask_3d
 from torch.nn.functional import one_hot
 
 
