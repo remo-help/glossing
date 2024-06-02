@@ -154,7 +154,8 @@ def read_glossing_direct(file: list[tuple]) -> GlossingFileData:
     for line in file:
         print(line)
         utt, morph = line
-
+        utt = str(utt)
+        morph = str(morph)
         # Start New Datapoint on Empty Line
 
         raw_datapoints.append(_make_empty_datapoint())
