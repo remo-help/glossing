@@ -3,7 +3,7 @@ import torch
 import logging
 import pandas as pd
 
-from data import GlossingDataset
+from data import GlossingDataset, InferenceDataset
 from pytorch_lightning import Trainer
 from ctc_model import CTCGlossingModel
 from containers import Hyperparameters
@@ -118,6 +118,17 @@ def _make_dataset(
 
     return dm
 
+def _make_inference_dataset(
+     filepath: str, vocab: str,  batch_size: int
+) -> InferenceDataset:
+
+    dm = InferenceDataset(
+        train_file=filepath,
+        vocab_file= vocab,
+        batch_size =batch_size
+    )
+
+    return dm
 
 def _make_model(
     model_type: str,

@@ -1,12 +1,12 @@
 import os
+import torch
 
 from tqdm import tqdm
-from experiment import _make_dataset
+from experiment import _make_dataset, _make_inference_dataset
 from pytorch_lightning import Trainer
 from ctc_model import CTCGlossingModel
 from experiment import _make_test_path
 from morpheme_model import MorphemeGlossingModel
-
 
 language_code_mapping = {
     "Arapaho": "arp",
@@ -37,7 +37,7 @@ def decode_predictions(predictions, source_tokenizer, target_tokenizer):
 
     decoded_predictions = []
     for sentence_prediction, sentence_segmentation in zip(
-        sentence_predictions, sentence_segmentations
+            sentence_predictions, sentence_segmentations
     ):
         decoded_sentence_prediction = [
             target_tokenizer.lookup_tokens(word_predictions)
@@ -72,13 +72,13 @@ def decode_predictions(predictions, source_tokenizer, target_tokenizer):
 
 
 def write_predictions(
-    predictions,
-    language_code: str,
-    track: int,
-    model_type: str,
-    trial: int = 1,
-    base_path: str = "./predictions",
-    data_path: str = "./data",
+        predictions,
+        language_code: str,
+        track: int,
+        model_type: str,
+        trial: int = 1,
+        base_path: str = "./predictions",
+        data_path: str = "./data",
 ):
     os.makedirs(base_path, exist_ok=True)
 
@@ -104,12 +104,12 @@ def write_predictions(
 
 
 def get_predictions(
-    path_to_model: str,
-    language: str,
-    track: int,
-    model_type: str,
-    data_path: str = "./data",
-    verbose: bool = False,
+        path_to_model: str,
+        language: str,
+        track: int,
+        model_type: str,
+        data_path: str = "./data",
+        verbose: bool = False,
 ):
     # Load Data
     dm = _make_dataset(language, track, data_path, 16)
@@ -182,6 +182,71 @@ def get_predictions_from_retrained_models(base_path: str = "./retrain_results"):
             model_type=model_type,
             trial=trial,
         )
+
+
+def get_predictions_single(model_path: str = 'models/glosser.ckpt', language_code='dnd', track=2, model_type='ctc'):
+    #path_to_best_checkpoint = os.path.('models/glosser.ckpt')
+
+    predictions = get_predictions(
+        path_to_model=model_path,
+        language=code_language_mapping[language_code],
+        track=track,
+        model_type=model_type,
+    )
+
+    write_predictions(
+        predictions=predictions,
+        language_code=language_code,
+        track=track,
+        model_type=model_type,
+        trial=trial,
+    )
+
+
+def get_predictions_inference(
+        path_to_model: str,
+        filepath: str or list[tuple],
+        vocab: str,
+        model_type: str,
+        #   data_path: str = "./data",
+        verbose: bool = False,
+        direct: bool = False,
+):
+    # Load Data
+    dm = _make_inference_dataset(filepath, vocab=vocab, batch_size=16)
+    dm.prepare_data()
+    if direct:
+        dm.setup(vocab=vocab, direct=True)
+    else:
+        dm.setup(vocab=vocab)
+
+    # Load Model
+    if model_type == "ctc":
+        model = CTCGlossingModel.load_from_checkpoint(checkpoint_path=path_to_model)
+    elif model_type == "morph":
+        model = MorphemeGlossingModel.load_from_checkpoint(
+            checkpoint_path=path_to_model
+        )
+    else:
+        raise ValueError(f"Unknown model: {model_type}")
+
+    # Create Trainer
+    # Train Model
+    accelerator = "gpu" if torch.cuda.is_available() else "cpu"
+    trainer = Trainer(
+        accelerator=accelerator,
+        devices=1,
+        enable_progress_bar=True,
+        enable_model_summary=verbose,
+        logger=False,
+    )
+
+    # Get predictions
+    predictions = trainer.predict(model=model, dataloaders=dm.train_dataloader())
+    predictions = decode_predictions(
+        predictions, dm.source_tokenizer, dm.target_tokenizer
+    )
+    return predictions
 
 
 if __name__ == "__main__":
