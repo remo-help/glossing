@@ -152,7 +152,7 @@ def read_glossing_direct(file: list[tuple]) -> GlossingFileData:
     raw_datapoints = [] #[_make_empty_datapoint()]
 
     for line in file:
-        print(line)
+        #print(line)
         utt, morph = line
         utt = str(utt)
         morph = str(morph)
